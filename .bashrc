@@ -48,4 +48,4 @@ GIT_PROMPT_START_ROOT='/c/repos'
 GIT_PROMPT_SHOW_UNTRACKED_FILES=no
 GIT_PROMPT_LEADING_SPACE=0
 
-source ~/.bash-git-prompt/gitprompt.sh
+source /d/Suli/GitHub/Egyéb/bash-git-prompt/gitprompt.sh
