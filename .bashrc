@@ -29,7 +29,7 @@ GIT_PROMPT_WITH_VIRTUAL_ENV=0 # uncomment to avoid setting virtual environment i
 # GIT_PROMPT_SHOW_UPSTREAM=1 # uncomment to show upstream tracking branch
 # GIT_PROMPT_SHOW_UNTRACKED_FILES=normal # can be no, normal or all; determines counting of untracked files
 
- GIT_PROMPT_SHOW_CHANGED_FILES_COUNT=1 # uncomment to avoid printing the number of changed files
+GIT_PROMPT_SHOW_CHANGED_FILES_COUNT=1 # uncomment to avoid printing the number of changed files
 
 # GIT_PROMPT_STATUS_COMMAND=gitstatus_pre-1.7.10.sh # uncomment to support Git older than 1.7.10
 
@@ -44,8 +44,11 @@ GIT_PROMPT_END=' $ '      # uncomment for custom prompt end sequence
 # GIT_PROMPT_THEME_FILE=~/.git-prompt-colors.sh
 # GIT_PROMPT_THEME=Solarized # use theme optimized for solarized color scheme
 
-GIT_PROMPT_START_ROOT='/c/repos'
+GIT_PROMPT_START_ROOT="$(dirname "$PWD")"
 GIT_PROMPT_SHOW_UNTRACKED_FILES=no
 GIT_PROMPT_LEADING_SPACE=0
 
-source /d/Suli/GitHub/Egyéb/bash-git-prompt/gitprompt.sh
+# Only source gitprompt.sh if we are in a git repository
+if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+    source "$GIT_PROMPT_START_ROOT/bash-git-prompt/gitprompt.sh"
+fi
