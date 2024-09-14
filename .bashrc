@@ -1,4 +1,3 @@
-alias confl='generator="Visual Studio 17 2022" ./build.sh configurelocal'
 alias gp='git push'
 alias gc='git commit -v'
 alias gcm='git commit -m "'
@@ -16,6 +15,9 @@ alias ...='cd ../..'
 alias ....='cd ../../..'
 alias .....='cd ../../../..'
 alias vdc='cd /c/repos/vdc_software'
+
+# Create an alias to call the function
+alias repos='jump_to_repo'
 
 PROMPT_DIRTRIM=2
 # Set config variables first
