@@ -73,7 +73,9 @@ echo "Adding \"repos\" alias for jumping to repo folder to .bashrc..."
 echo "$ALIAS" >> ~/.bashrc
 
 # Step 3: Source the git prompt script
-echo "source $CURRENT_PATH/gitprompt.sh" >> ~/.bashrc
+echo "if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+    source \"$CURRENT_PATH/gitprompt.sh\"
+fi" >> ~/.bashrc
 
 echo
 echo "Alias added, .bashrc updated, and copied to home folder."

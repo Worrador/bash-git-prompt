@@ -49,8 +49,3 @@ GIT_PROMPT_END=' $ '      # uncomment for custom prompt end sequence
 GIT_PROMPT_START_ROOT="$(dirname "$PWD")"
 GIT_PROMPT_SHOW_UNTRACKED_FILES=no
 GIT_PROMPT_LEADING_SPACE=0
-
-# Only source gitprompt.sh if we are in a git repository
-if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-    source "$GIT_PROMPT_START_ROOT/bash-git-prompt/gitprompt.sh"
-fi
