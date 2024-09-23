@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Define color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m' # No Color
+
 # Function to browse for a directory using PowerShell
 browse_directory() {
     powershell -Command "Add-Type -AssemblyName System.Windows.Forms; \$folderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog; \$folderBrowser.Description = 'Select installation directory'; \$folderBrowser.RootFolder = 'MyComputer'; if(\$folderBrowser.ShowDialog() -eq 'OK') { Write-Host \$folderBrowser.SelectedPath }"
@@ -7,7 +13,6 @@ browse_directory() {
 
 # Install Scoop if not present
 if ! command -v scoop &> /dev/null; then
-
     # Prompt user to browse for installation directory
     echo "Please select the installation directory:"
     install_dir=$(browse_directory)
@@ -17,33 +22,27 @@ if ! command -v scoop &> /dev/null; then
         if [ ! -d "$install_dir" ]; then
             mkdir -p "$install_dir"
         fi
-        # Convert to Windows path style (double backslashes for Windows paths in Bash)
+        # Convert to Windows path style
         install_dir=$(echo "$install_dir" | sed 's/\//\\/g')
         echo "Installation directory set to: $install_dir"
 
         # Set the SCOOP environment variable to the selected directory in PowerShell
         powershell -Command "[Environment]::SetEnvironmentVariable('SCOOP', '$install_dir', [System.EnvironmentVariableTarget]::User)"
-
     else
-        echo "No directory selected. Using default installation paths for each software."
+        echo -e "${YELLOW}No directory selected. Using default installation paths for each software.${NC}"
         exit 1
     fi
 
     echo "Installing Scoop..."
     powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh'))"
     export PATH="$install_dir/shims:$PATH"
+	# Configure Scoop to use the selected installation directory
+	scoop config root "$install_dir"
 else
-    echo "Scoop is already installed."
+    echo -e "${YELLOW}Scoop is already installed.${NC}"
     scoop_dir=$(powershell -Command "[Environment]::GetEnvironmentVariable('SCOOP', [System.EnvironmentVariableTarget]::User)")
-    echo "Installation directory is set to: $scoop_dir. Uninstall scoop to change that"
+    echo -e "${YELLOW}Installation directory is set to: $scoop_dir. Uninstall scoop to change that.${NC}"
 fi
-
-
-# Set Scoop installation directory
-powershell -Command "[Environment]::SetEnvironmentVariable('SCOOP','"$install_dir"',[System.EnvironmentVariableTarget]::User)"
-
-# Configure Scoop to use the selected installation directory
-scoop config root "$install_dir"
 
 # Function to install software with Scoop
 install_software() {
@@ -52,11 +51,16 @@ install_software() {
         read -p "Do you want to install $software? (y/n): " choice
         case "$choice" in 
             y|Y )
-                echo "Installing $software..."
+                echo -e "${YELLOW}Installing $software...${NC}"
                 scoop install $software
+                if [ $? -eq 0 ]; then
+                    echo -e "${GREEN}$software installed successfully.${NC}"
+                else
+                    echo -e "${RED}Failed to install $software.${NC}"
+                fi
                 ;;
             * )
-                echo "Skipping installation of $software."
+                echo -e "${YELLOW}Skipping installation of $software.${NC}"
                 ;;
         esac
     else
@@ -64,11 +68,25 @@ install_software() {
     fi
 }
 
+
+# Function to add bucket if it doesn't exist
+
+add_bucket_if_not_exists() {
+    local bucket_name=$1
+    if ! scoop bucket list | grep -q "$bucket_name"; then
+        echo -e "${YELLOW}Adding bucket: $bucket_name${NC}"
+        scoop bucket add "$bucket_name"
+    fi
+}
+
+
+
 # Add necessary buckets
-scoop bucket add extras
-scoop bucket add versions
-scoop bucket add java
-scoop bucket add nerd-fonts
+echo "Checking bucket installations..."
+add_bucket_if_not_exists extras
+add_bucket_if_not_exists versions
+add_bucket_if_not_exists java
+add_bucket_if_not_exists nerd-fonts
 
 # Core development tools
 install_software git
@@ -95,12 +113,10 @@ install_software notepadplusplus
 install_software gh
 
 # Containerization and virtualization
-# Note: Docker might require manual installation as it's not typically managed by Scoop
-echo "Docker installation might require manual steps. Please visit https://docs.docker.com/desktop/windows/install/ for instructions."
+echo -e "${YELLOW}Docker installation might require manual steps. Please visit https://docs.docker.com/desktop/windows/install/ for instructions.${NC}"
 
 # Debugging tools
-# Note: WinDbg might not be available through Scoop
-echo "WinDbg might require manual installation. Please visit https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/debugger-download-tools for instructions."
+echo -e "${YELLOW}WinDbg might require manual installation. Please visit https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/debugger-download-tools for instructions.${NC}"
 
 # Data science and notebooks
 install_software jupyter
@@ -118,7 +134,7 @@ install_software vlc
 # Archivers
 install_software winrar
 
-echo "All installations checked!"
+echo -e "${GREEN}All installations checked!${NC}"
 
 # Keep the window open
 read -p "Press [Enter] to exit."
