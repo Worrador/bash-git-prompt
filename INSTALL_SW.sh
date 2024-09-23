@@ -1,86 +1,59 @@
 #!/bin/bash
 
-# Function to check if the script is running as administrator
-is_admin() {
-    net session > /dev/null 2>&1
-    return $?
-}
-
-# Function to elevate privileges
-elevate_privileges() {
-    echo "Requesting administrator privileges..."
-    powershell -Command "Start-Process cmd -Verb RunAs -ArgumentList '/c',\"$0\""
-    exit 0
-}
-
-# Function to browse for a directory
+# Function to browse for a directory using PowerShell
 browse_directory() {
     powershell -Command "Add-Type -AssemblyName System.Windows.Forms; \$folderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog; \$folderBrowser.Description = 'Select installation directory'; \$folderBrowser.RootFolder = 'MyComputer'; if(\$folderBrowser.ShowDialog() -eq 'OK') { Write-Host \$folderBrowser.SelectedPath }"
 }
 
-# Check for admin privileges and elevate if necessary
-if ! is_admin; then
-    elevate_privileges
-fi
+# Install Scoop if not present
+if ! command -v scoop &> /dev/null; then
 
-# Now the script is running with admin privileges
-echo "The script is running with administrative privileges!"
+    # Prompt user to browse for installation directory
+    echo "Please select the installation directory:"
+    install_dir=$(browse_directory)
 
-# Prompt user to browse for installation directory
-echo "Please select the installation directory:"
-install_dir=$(browse_directory)
+    # Validate and create the directory if it doesn't exist
+    if [ ! -z "$install_dir" ]; then
+        if [ ! -d "$install_dir" ]; then
+            mkdir -p "$install_dir"
+        fi
+        # Convert to Windows path style (double backslashes for Windows paths in Bash)
+        install_dir=$(echo "$install_dir" | sed 's/\//\\/g')
+        echo "Installation directory set to: $install_dir"
 
-# Validate and create the directory if it doesn't exist
-if [ ! -z "$install_dir" ]; then
-    if [ ! -d "$install_dir" ]; then
-        mkdir -p "$install_dir"
-    fi
-    # Convert to Windows path style
-    install_dir=$(echo "$install_dir" | sed 's/\//\\/g')
-    echo "Installation directory set to: $install_dir"
-else
-    echo "No directory selected. Using default installation paths for each software."
-fi
+        # Set the SCOOP environment variable to the selected directory in PowerShell
+        powershell -Command "[Environment]::SetEnvironmentVariable('SCOOP', '$install_dir', [System.EnvironmentVariableTarget]::User)"
 
-# Function to check if a command is available
-is_installed() {
-    command -v "$1" > /dev/null 2>&1
-}
-
-# Install Chocolatey if not present
-if ! is_installed choco; then
-    echo "Installing Chocolatey..."
-    powershell -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command \
-    "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
-    
-    # Determine Chocolatey installation path
-    choco_path=$(powershell -Command "[System.Environment]::GetEnvironmentVariable('ChocolateyInstall', 'Machine')")
-    
-    if [ -n "$choco_path" ]; then
-        # Add Chocolatey to PATH
-        export PATH="$PATH:$choco_path/bin"
-        echo "Chocolatey installed. Added to PATH: $choco_path/bin"
     else
-        echo "Warning: Couldn't determine Chocolatey installation path."
+        echo "No directory selected. Using default installation paths for each software."
+        exit 1
     fi
+
+    echo "Installing Scoop..."
+    powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh'))"
+    export PATH="$install_dir/shims:$PATH"
 else
-    echo "Chocolatey is already installed."
+    echo "Scoop is already installed."
+    scoop_dir=$(powershell -Command "[Environment]::GetEnvironmentVariable('SCOOP', [System.EnvironmentVariableTarget]::User)")
+    echo "Installation directory is set to: $scoop_dir. Uninstall scoop to change that"
 fi
 
-# Function to install software with custom path and user prompt
+
+# Set Scoop installation directory
+powershell -Command "[Environment]::SetEnvironmentVariable('SCOOP','"$install_dir"',[System.EnvironmentVariableTarget]::User)"
+
+# Configure Scoop to use the selected installation directory
+scoop config root "$install_dir"
+
+# Function to install software with Scoop
 install_software() {
     local software=$1
-    local command=$2
-    if ! is_installed $command; then
+    if ! scoop list | grep -q "^$software "; then
         read -p "Do you want to install $software? (y/n): " choice
         case "$choice" in 
             y|Y )
                 echo "Installing $software..."
-                if [ ! -z "$install_dir" ]; then
-                    choco install $software -y --install-directory="$install_dir"
-                else
-                    choco install $software -y
-                fi
+                scoop install $software
                 ;;
             * )
                 echo "Skipping installation of $software."
@@ -90,52 +63,60 @@ install_software() {
         echo "$software is already installed."
     fi
 }
+
+# Add necessary buckets
+scoop bucket add extras
+scoop bucket add versions
+scoop bucket add java
+scoop bucket add nerd-fonts
+
 # Core development tools
-install_software git git
-install_software mingw mingw
-install_software cmake cmake
-install_software make make
-install_software ninja ninja
-install_software gdb gdb
-install_software llvm clang
+install_software git
+install_software mingw
+install_software cmake
+install_software make
+install_software ninja
+install_software gdb
+install_software llvm
 
 # Package managers and build tools
-install_software vcpkg vcpkg
-install_software conan conan
+install_software vcpkg
+install_software conan
 
 # Programming languages and runtimes
-install_software python3 python
-install_software python-pip pip
-install_software nodejs node
+install_software python
+install_software nodejs
 
 # IDEs and text editors
-install_software vscode code
-install_software notepadplusplus notepad++
+install_software vscode
+install_software notepadplusplus
 
 # Version control and CLI tools
-install_software gh gh
+install_software gh
 
 # Containerization and virtualization
-install_software docker docker
+# Note: Docker might require manual installation as it's not typically managed by Scoop
+echo "Docker installation might require manual steps. Please visit https://docs.docker.com/desktop/windows/install/ for instructions."
 
 # Debugging tools
-install_software windbg windbg
+# Note: WinDbg might not be available through Scoop
+echo "WinDbg might require manual installation. Please visit https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/debugger-download-tools for instructions."
 
 # Data science and notebooks
-install_software jupyter jupyter
+install_software jupyter
 
 # Terminal and system utilities
-install_software microsoft-windows-terminal wt
-install_software 7zip 7z
+install_software windows-terminal
+install_software 7zip
 
 # Browsers
-install_software brave brave
+install_software brave
 
 # Media players
-install_software vlc vlc
+install_software vlc
 
 # Archivers
-install_software winrar winrar
+install_software winrar
 
 echo "All installations checked!"
 
