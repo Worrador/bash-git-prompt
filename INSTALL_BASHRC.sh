@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Get the current directory path using Windows-style forward slashes
 CURRENT_PATH=$(pwd | sed 's#\\#/#g')
 SCRIPT_DIR=$(dirname "${BASH_SOURCE[0]}")
@@ -7,22 +6,28 @@ PARENT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Function to search for directories on the D: drive containing 'repo'
 function search_repo_folders() {
-    find /d -type d -iname "*repo*" 2>/dev/null | head -n 10  # Limit search to 10 results for simplicity
+    find /d -type d -iname "*repo*" 2>/dev/null | grep -v '\$RECYCLE.BIN' | head -n 10  # Limit search to 10 results for simplicity
+}
+
+# Function to browse for a directory using PowerShell
+browse_directory() {
+    powershell -Command "Add-Type -AssemblyName System.Windows.Forms; \$folderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog; \$folderBrowser.Description = 'Select repository root folder'; \$folderBrowser.RootFolder = 'MyComputer'; if(\$folderBrowser.ShowDialog() -eq 'OK') { Write-Host \$folderBrowser.SelectedPath }"
 }
 
 # Search for "repo" directories beforehand
 repo_dirs=$(search_repo_folders)
 
 # Combine the parent directory and the search results for listing
-echo -e "Select a repository root folder from the list below, or enter a custom path:\n"
+echo -e "Select a repository root folder from the list below, or browse for a folder:\n"
 
 # Add found directories to options array
+options=()
 while IFS= read -r line; do
     options+=("$line")
 done <<< "$repo_dirs"
 
-# Add manual input option
-options+=("Enter a custom path manually")
+# Add browse option
+options+=("Browse for folder")
 
 # Display the options to the user
 i=1
@@ -31,15 +36,15 @@ for option in "${options[@]}"; do
     ((i++))
 done
 
-# Prompt the user to choose from the options or enter a custom path
+# Prompt the user to choose from the options
 echo
-read -p "Enter the number of your choice, or type a custom path: " choice
+read -p "Enter the number of your choice: " choice
 
 # Handle user selection
 if [[ "$choice" =~ ^[0-9]+$ ]]; then
     if ((choice > 0 && choice <= ${#options[@]})); then
-        if [[ "${options[$((choice-1))]}" == "Enter a custom path manually" ]]; then
-            read -p "Enter the full path to your repository root folder: " REPO_ROOT
+        if [[ "${options[$((choice-1))]}" == "Browse for folder" ]]; then
+            REPO_ROOT=$(browse_directory)
         else
             REPO_ROOT="${options[$((choice-1))]}"
         fi
@@ -48,19 +53,17 @@ if [[ "$choice" =~ ^[0-9]+$ ]]; then
         exit 1
     fi
 else
-    REPO_ROOT="$choice"
+    echo "Invalid input. Please enter a number. Exiting..."
+    exit 1
 fi
 
-# Validate the selected or entered directory
+# Validate the selected directory
 if [ -d "$REPO_ROOT" ]; then
     echo "Selected repository root: $REPO_ROOT"
 else
     echo "Invalid directory. Exiting..."
     exit 1
 fi
-
-# Clear the screen after selection
-clear
 
 # Step 0: Copy .bashrc to home folder
 cp ./.bashrc ~/
