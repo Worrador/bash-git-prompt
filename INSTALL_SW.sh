@@ -34,10 +34,10 @@ if ! command -v scoop &> /dev/null; then
     fi
 
     echo "Installing Scoop..."
-    powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh'))"
-    export PATH="$install_dir/shims:$PATH"
 	# Configure Scoop to use the selected installation directory
 	scoop config root "$install_dir"
+    powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh'))"
+    export PATH="$install_dir/shims:$PATH"
 else
     echo -e "${YELLOW}Scoop is already installed.${NC}"
     scoop_dir=$(powershell -Command "[Environment]::GetEnvironmentVariable('SCOOP', [System.EnvironmentVariableTarget]::User)")
@@ -48,7 +48,7 @@ fi
 install_software() {
     local software=$1
     if ! scoop list | grep -q "^$software "; then
-        read -p "Do you want to install $software? (y/n): " choice
+        read -p "Do you want to install $software? ([Y]es/[N]o/[E]xit): " choice
         case "$choice" in 
             y|Y )
                 echo -e "${YELLOW}Installing $software...${NC}"
@@ -59,6 +59,9 @@ install_software() {
                     echo -e "${RED}Failed to install $software.${NC}"
                 fi
                 ;;
+			e|E )
+				exit 0
+				;;
             * )
                 echo -e "${YELLOW}Skipping installation of $software.${NC}"
                 ;;
@@ -89,6 +92,9 @@ add_bucket_if_not_exists java
 add_bucket_if_not_exists nerd-fonts
 
 # Core development tools
+echo
+echo -e "${YELLOW}Autohotkey installation is necessary for bordeless git bash window...${NC}"
+install_software autohotkey
 install_software git
 install_software mingw
 install_software cmake
