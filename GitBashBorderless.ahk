@@ -1,3 +1,5 @@
++Esc::Send("0")  ; Maps Shift + Escape to output the character "0"
+
 SetTitleMatchMode "2"  ; Partial title match mode
 hoverStartTime := 0   ; Variable to track the hover start time
 hoverDuration := 1000  ; Hover duration in milliseconds (3 seconds)
