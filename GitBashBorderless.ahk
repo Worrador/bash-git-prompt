@@ -1,5 +1,3 @@
-+Esc::Send("0")  ; Maps Shift + Escape to output the character "0"
-
 SetTitleMatchMode "2"  ; Partial title match mode
 hoverStartTime := 0   ; Variable to track the hover start time
 hoverDuration := 1000  ; Hover duration in milliseconds (3 seconds)
@@ -10,6 +8,7 @@ CheckMousePosition() {
 
     ; Check if the window exists using the class name "mintty"
     if WinExist("ahk_class mintty") {
+        DllCall("SetWindowLong", "Ptr", WinExist("ahk_class mintty"), "Int", -16, "Int", DllCall("GetWindowLong", "Ptr", WinExist("ahk_class mintty"), "Int", -16) & ~0x200000)  ; Remove
         ; Get the window position and dimensions
         WinGetPos(&winX, &winY, &winWidth, &winHeight, "ahk_class mintty")
         ; Get current mouse position
