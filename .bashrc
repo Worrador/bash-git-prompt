@@ -51,3 +51,42 @@ GIT_PROMPT_END=' $ '      # uncomment for custom prompt end sequence
 GIT_PROMPT_START_ROOT="$(dirname "$PWD")"
 GIT_PROMPT_SHOW_UNTRACKED_FILES=no
 GIT_PROMPT_LEADING_SPACE=0
+
+if [ "$TERM_PROGRAM" = "vscode" ]; then
+  # Define color variables with proper escape character
+  RED=$'\e[31m'
+  BOLD=$'\e[1m'
+  YELLOW=$'\e[33m'
+  GREEN=$'\e[32m'
+  BLUE=$'\e[34m'
+  RESET=$'\e[0m'
+
+  # Create a temporary file for processing
+  exec > >(awk '{
+    if ($0 ~ /<E>/ || $0 ~ /<F>/ || $0 ~ /\[E\]/ || $0 ~ /\[ERROR\]/ || $0 ~ /\[FATAL\]/ || $0 ~ /\[F\]/) {
+      # For lines with error or fatal indicators, make whole line red and bold
+      line = $0;
+      gsub(/<E>|\\[E\\]|\\[ERROR\\]/, "'"${BOLD}${RED}"'&'"${RESET}${BOLD}${RED}"'", line);
+      gsub(/<F>|\\[F\\]|\\[FATAL\\]/, "'"${BOLD}${RED}"'&'"${RESET}${BOLD}${RED}"'", line);
+      gsub(/<W>/, "'"${YELLOW}"'<W>'"${RESET}${BOLD}${RED}"'", line);
+      gsub(/<D>/, "'"${GREEN}"'<D>'"${RESET}${BOLD}${RED}"'", line);
+      gsub(/<I>/, "'"${BLUE}"'<I>'"${RESET}${BOLD}${RED}"'", line);
+      print "'"${BOLD}${RED}"'" line "'"${RESET}"'";
+    } else if ($0 ~ /[Ee]rror|[Ff]atal/) {
+      # For error lines without specific tags, color the whole line red but not bold
+      line = $0;
+      gsub(/<W>/, "'"${YELLOW}"'<W>'"${RESET}${RED}"'", line);
+      gsub(/<D>/, "'"${GREEN}"'<D>'"${RESET}${RED}"'", line);
+      gsub(/<I>/, "'"${BLUE}"'<I>'"${RESET}${RED}"'", line);
+      print "'"${RED}"'" line "'"${RESET}"'";
+    } else {
+      # For normal lines
+      gsub(/<W>/, "'"${YELLOW}"'<W>'"${RESET}"'", $0);
+      gsub(/<D>/, "'"${GREEN}"'<D>'"${RESET}"'", $0);
+      gsub(/<I>/, "'"${BLUE}"'<I>'"${RESET}"'", $0);
+      print $0;
+    }
+  }')
+fi
+
+
